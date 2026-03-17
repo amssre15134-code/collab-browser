@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollabBrowser — Browse Together</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ======== LOBBY ======== -->
+<div id="lobby">
+  <div class="lobby-card">
+    <div class="lobby-logo">🌐</div>
+    <div class="lobby-title">CollabBrowser</div>
+    <div class="lobby-sub">Browse together, chat, video call &amp; stream in 1080p 60fps</div>
+
+    <label>Your Name</label>
+    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="24">
+
+    <button class="btn btn-primary" onclick="createRoom()">✨ Create New Room</button>
+
+    <div class="divider">or join existing</div>
+
+    <label>Room Code</label>
+    <input type="text" id="roomInput" placeholder="Enter 6-digit room code" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;text-align:center;">
+
+    <button class="btn btn-secondary" onclick="joinRoom()">🔗 Join Room</button>
+
+    <div class="room-id-badge" id="newRoomBadge">
+      Share this code with your friend:<br>
+      <span id="newRoomCode">------</span>
+      <br><small style="color:var(--muted);font-size:11px;margin-top:4px;display:block;">Waiting for them to join…</small>
+    </div>
+  </div>
+</div>
+
+<!-- ======== APP ======== -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <span class="topbar-logo">🌐</span>
+    <span class="topbar-title">CollabBrowser</span>
+    <div class="room-badge">Room <span id="topRoomCode">------</span></div>
+    <div class="peer-status">
+      <div class="status-dot" id="peerDot"></div>
+      <span id="peerName">Waiting for peer...</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="micBtn" title="Toggle Mic" onclick="toggleMic()">🎙️</button>
+      <button class="icon-btn" id="camBtn" title="Toggle Camera" onclick="toggleCam()">📷</button>
+      <button class="icon-btn" id="screenBtn" title="Share Tab/Screen" onclick="toggleScreenShare()">🖥️</button>
+      <button class="icon-btn" title="Copy invite link" onclick="copyInvite()">🔗</button>
+      <button class="icon-btn danger" title="Leave" onclick="leaveRoom()">📴</button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Left: Browser + Videos -->
+    <div class="browser-panel">
+      <!-- URL Bar -->
+      <div class="url-bar">
+        <input type="text" id="urlInput" placeholder="Enter a URL to browse together..." value="https://en.wikipedia.org/wiki/Main_Page">
+        <button class="url-btn" onclick="navigateTo()">Go</button>
+        <span class="sync-indicator" id="syncIndicator">🔄 Synced</span>
+      </div>
+
+      <!-- Browser Content -->
+      <div class="browser-content" style="position:relative;">
+        <iframe id="browserIframe" class="browser-iframe"
+          src="https://en.wikipedia.org/wiki/Main_Page"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
+          allow="fullscreen">
+        </iframe>
+
+        <!-- Screen share overlay (incoming) -->
+        <div class="screenshare-overlay" id="screenshareOverlay">
+          <video id="remoteScreenVideo" autoplay playsinline muted></video>
+        </div>
+
+        <div class="screenshare-banner" id="screenshareBanner">📺 Screen Share Active</div>
+
+        <!-- Waiting overlay -->
+        <div class="waiting-overlay" id="waitingOverlay">
+          <div class="spinner"></div>
+          <div class="waiting-text">Waiting for your friend to join…</div>
+          <div style="font-size:13px;color:var(--accent);font-weight:600;" id="waitingCode"></div>
+        </div>
+      </div>
+
+      <!-- Video Strip -->
+      <div class="video-strip">
+        <!-- Local video -->
+        <div class="video-tile">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="video-label" id="localVideoLabel">You</div>
+        </div>
+        <!-- Remote video -->
+        <div class="video-tile">
+          <div class="video-placeholder" id="remotePlaceholder">
+            <div class="avatar">👤</div>
+            <div class="vname" id="remoteVideoName">Waiting...</div>
+          </div>
+          <video id="remoteVideo" autoplay playsinline style="display:none;"></video>
+          <div class="video-label" id="remoteVideoLabel" style="display:none;"></div>
+        </div>
+        <!-- Video controls -->
+        <div class="video-controls">
+          <button class="icon-btn" title="Picture-in-Picture" onclick="togglePiP()" style="font-size:14px;">⊞ PiP</button>
+          <button class="icon-btn" title="Fullscreen video" onclick="fullscreenVideo()" style="font-size:14px;">⛶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chat -->
+    <div class="chat-panel">
+      <div class="chat-tabs">
+        <button class="chat-tab active" onclick="switchTab('chat', this)">💬 Chat</button>
+        <button class="chat-tab" onclick="switchTab('info', this)">ℹ️ Info</button>
+      </div>
+
+      <!-- Chat Tab -->
+      <div class="tab-content active" id="tab-chat">
+        <div class="messages" id="messages"></div>
+        <div class="chat-input-area">
+          <textarea id="chatInput" rows="1" placeholder="Type a message…" onkeydown="chatKeydown(event)"></textarea>
+          <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+      </div>
+
+      <!-- Info Tab -->
+      <div class="tab-content" id="tab-info">
+        <div class="info-panel">
+          <div class="info-section">
+            <h3>Session</h3>
+            <div class="info-row"><span class="label">Room Code</span><span class="value" id="infoRoomCode">--</span></div>
+            <div class="info-row"><span class="label">Your Name</span><span class="value" id="infoMyName">--</span></div>
+            <div class="info-row"><span class="label">Peer</span><span class="value" id="infoPeerName">--</span></div>
+          </div>
+          <div class="info-section">
+            <h3>Connection</h3>
+            <div class="info-row"><span class="label">Status</span><span id="infoStatus" class="value">⏳ Waiting</span></div>
+            <div class="info-row"><span class="label">Video</span><span id="infoVideo" class="value">--</span></div>
+            <div class="info-row"><span class="label">Screen</span><span id="infoScreen" class="value">Off</span></div>
+          </div>
+          <div class="info-section">
+            <h3>Invite Friend</h3>
+            <div style="text-align:center;padding:16px 0;">
+              <div style="font-size:28px;font-weight:800;letter-spacing:6px;color:var(--accent);margin-bottom:12px;" id="infoBigCode">------</div>
+              <button class="btn btn-primary" onclick="copyInvite()" style="width:auto;padding:10px 24px;">📋 Copy Invite Code</button>
+            </div>
+          </div>
+          <div class="info-section">
+            <h3>Stream Quality</h3>
+            <div class="info-row"><span class="label">Resolution</span><span class="value">1080p</span></div>
+            <div class="info-row"><span class="label">Frame Rate</span><span class="value">60 fps</span></div>
+            <div class="info-row"><span class="label">Video Codec</span><span class="value">VP9 / H.264</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Leave Confirm Modal -->
+<div class="modal-backdrop" id="leaveModal">
+  <div class="modal">
+    <h2>Leave Room?</h2>
+    <p>Your friend will see you've disconnected. Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmLeave()">Leave</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

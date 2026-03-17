@@ -1,0 +1,20 @@
+{
+  "name": "collab-browser",
+  "version": "1.0.0",
+  "description": "Real-time collaborative browser with video chat, text chat, and 1080p 60fps screen share",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx nodemon server.js"
+  },
+  "keywords": ["webrtc", "screen-share", "video-chat", "collab"],
+  "author": "Shrey Kumar",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
